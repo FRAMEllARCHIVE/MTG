@@ -359,8 +359,10 @@ let highestZIndex = 1;
 function makeCardDraggable(card) {
     let offsetX, offsetY;
 
+    // Mouse down event
     card.onmousedown = function (e) {
-
+        e.preventDefault(); // Prevent default behavior (like text selection)
+        
         highestZIndex++;
         card.style.zIndex = highestZIndex;
 
@@ -390,7 +392,44 @@ function makeCardDraggable(card) {
             }
         };
     };
+
+
+    card.ontouchstart = function (e) {
+        e.preventDefault();
+        
+        highestZIndex++;
+        card.style.zIndex = highestZIndex;
+
+        const touch = e.touches[0];
+        offsetX = touch.clientX - card.offsetLeft;
+        offsetY = touch.clientY - card.offsetTop;
+
+        document.ontouchmove = function (e) {
+            const touch = e.touches[0];
+            card.style.left = `${touch.clientX - offsetX}px`;
+            card.style.top = `${touch.clientY - offsetY}px`;
+        };
+
+        document.ontouchend = function () {
+            document.ontouchmove = null;
+            document.ontouchend = null;
+
+            if (isConnected) {
+                const cardId = card.id;
+                const x = card.offsetLeft;
+                const y = card.offsetTop;
+
+                conn.send({
+                    type: 'cardMove',
+                    cardId: cardId,
+                    x: x,
+                    y: y
+                });
+            }
+        };
+    };
 }
+
 
 
     function displayChatMessage(message) {
