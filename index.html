@@ -29,7 +29,7 @@
             background-size: cover;
             cursor: move;
             transition: transform 0.2s;
-            border-radius: 3.3px;
+            border-radius: 4px;
         }
 
         #preview {
@@ -53,24 +53,40 @@
 
         #controls {
             position: fixed;
-            top: 10px;
+            top: 80px;
             left: 10px;
             z-index: 1000;
+            display: none;
+            flex-direction: column;
+            background-color: transparent;
+            padding: 10px;
         }
 
         button {
-            background-color: #4CAF50;
+            background-color: transparent;
             border: none;
             color: white;
-            padding: 8px 20px;
-            text-align: center;
+            text-align: left;
             text-decoration: none;
             display: inline-block;
             font-size: 16px;
-            margin: 4px 2px;
+            margin: 4px 0;
             cursor: pointer;
-            border-radius: 5px;
         }
+
+#menuButton {
+    position: fixed;
+    top: 10px;
+    left: 20px;
+    z-index: 1000;
+    background-color: transparent;
+    color: white;
+    padding: 15px 5px;
+    border: none;
+    cursor: pointer;
+    font-size: 32px;
+    border-radius: 5px;
+}
 
         #message {
             position: fixed;
@@ -79,240 +95,195 @@
             transform: translateX(-50%);
             background-color: #333;
             color: #fff;
-            padding: 10px;
-            border-radius: 5px;
+            padding: 10px 20px;
+            border-radius: 22px;
             display: none;
             z-index: 1000;
         }
-
-#chatBox {
-    position: absolute;
-    left: 5%;
-    top: 50%;
-    width: 300px;
-    background-color: #222;
-    color: #fff;
-    padding: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-    z-index: 1000;
-    border-radius: 15px;
-    cursor: move;
-}
-
-
-        #chatMessages {
-            max-height: 150px;
-            overflow-y: scroll;
-            margin-bottom: 10px;
-        }
-
-        #chatMessages::-webkit-scrollbar {
-            width: 0;
-        }
-
-        #chatMessages {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        #chatInput {
-            width: calc(100% - 20px);
-            padding: 10px;
-            border-radius: 5px;
-            border: none;
-            background-color: #444;
-            color: #fff;
-            font-size: 16px;
-        }
-
-        #peerControls {
-            display: flex;
-            flex-direction: column;
-            margin-top: 8px;
-        }
-
-        #cardName {
-            width: 300px;
-            height: 15px;
-            padding: 10px;
-            border-radius: 5px;
-            border: none;
-            background-color: #444;
-            color: #fff;
-            font-size: 16px;
-        }
-
-        #preview {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 200px;
-            height: 280px;
-            background-color: rgba(0, 0, 0, 0.8);
-            border-radius: 10px;
-            display: none;
-            justify-content: center;
-            align-items: center;
-        }
-
-        #preview img {
-            width: 100%;
-            height: auto;
-            border-radius: 10px;
-        }
-
     </style>
 </head>
 <body>
-<div id="controls">
-    <input type="file" id="uploadDeckBtn" accept=".txt" style="display: none;" />
-    <button id="uploadBtn">UPLOAD</button>
-</div>
-<div id="gameBoard"></div>
-<div id="message"></div>
-
-<div id="chatBox">
-    <div id="chatMessages"></div>
-    <input type="text" id="chatInput" placeholder="Type a message..." />
-    <div id="peerControls">
+    <button id="menuButton">&#9776;</button>
+    <div id="controls">
+        <input type="file" id="uploadDeckBtn" accept=".txt" style="display: none;" />
+        <button id="uploadBtn">UPLOAD</button>
         <button id="connectBtn">CONNECT</button>
         <button id="copyPeerIdBtn">LINK</button>
     </div>
-</div>
+    <div id="gameBoard"></div>
+    <div id="message"></div>
 
-<div id="preview">
-    <img id="previewImage" src="" alt="Card Preview" />
-</div>
+    <div id="preview">
+        <img id="previewImage" src="" alt="Card Preview" />
+    </div>
 
-<script>
+    <script>
+        const gameBoard = document.getElementById('gameBoard');
+        const connectBtn = document.getElementById('connectBtn');
+        const uploadDeckBtn = document.getElementById('uploadDeckBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const copyPeerIdBtn = document.getElementById('copyPeerIdBtn');
+        const messageDiv = document.getElementById('message');
+        const controls = document.getElementById('controls');
+        const menuButton = document.getElementById('menuButton');
 
-    const gameBoard = document.getElementById('gameBoard');
-    const connectBtn = document.getElementById('connectBtn');
-    const uploadDeckBtn = document.getElementById('uploadDeckBtn');
-    const uploadBtn = document.getElementById('uploadBtn');
-    const copyPeerIdBtn = document.getElementById('copyPeerIdBtn');
-    const messageDiv = document.getElementById('message');
-    const chatMessagesDiv = document.getElementById('chatMessages');
-    const chatInput = document.getElementById('chatInput');
+        let peer;
+        let conn;
+        let isConnected = false;
 
-    let peer;
-    let conn;
-    let isConnected = false;
+        function initPeer() {
+            peer = new Peer();
 
-function initPeer() {
-        peer = new Peer();
+            peer.on('open', (id) => {
+                console.log('My peer ID is: ' + id);
+            });
 
-        peer.on('open', (id) => {
-            console.log('My peer ID is: ' + id);
-        });
-
-        peer.on('connection', (connection) => {
-            conn = connection;
-            setupConnection();
-        });
-    }
-
-function connectToPeer() {
-        const peerId = prompt("Enter your opponent's peer ID:");
-        if (peerId) {
-            conn = peer.connect(peerId);
-            setupConnection();
+            peer.on('connection', (connection) => {
+                conn = connection;
+                setupConnection();
+            });
         }
-    }
 
-function moveCard(cardId, x, y) {
-        const card = document.getElementById(cardId);
-        if (card) {
-            card.style.left = `${x}px`;
-            card.style.top = `${y}px`;
-        } else {
-            console.warn(`Card with ID ${cardId} not found.`);
+        function connectToPeer() {
+            const peerId = prompt("Enter your opponent's peer ID:");
+            if (peerId) {
+                conn = peer.connect(peerId);
+                setupConnection();
+            }
         }
-    }
-
 
 function setupConnection() {
-        conn.on('open', () => {
-            isConnected = true;
-            console.log('Connected to peer');
-            showMessage('Connected to opponent!');
-        });
+    conn.on('open', () => {
+        isConnected = true;
+        console.log('Connected to peer');
+        showMessage('Connected to opponent!');
+    });
 
-        conn.on('data', (data) => {
-            if (data.type === 'cardMove') {
-                moveCard(data.cardId, data.x, data.y);
-            } else if (data.type === 'newCard') {
-                createCard(data.cardId, data.imageUrl, data.x, data.y);
-            } else if (data.type === 'chatMessage') {
-                displayChatMessage(data.message);
+    conn.on('data', (data) => {
+        if (data.type === 'cardMove') {
+            moveCard(data.cardId, data.x, data.y);
+        } else if (data.type === 'newCard') {
+            createCard(data.cardId, data.imageUrl, data.x, data.y);
+        } else if (data.type === 'toggleImage') {
+            // Handle the image toggle message
+            const card = document.getElementById(data.cardId);
+            if (card) {
+                card.style.backgroundImage = `url(${data.newImage})`;
             }
-        });
-    }
-
-function hashCardName(cardName, index) {
-        let hash = 0;
-        for (let i = 0; i < cardName.length; i++) {
-            const char = cardName.charCodeAt(i);
-            hash = (hash << 5) - hash + char;
-            hash |= 0;
         }
-        return `${hash}_${index}`;
-    }
+    });
+}
 
-function uploadDeck(event) {
-        const file = event.target.files[0];
-        const reader = new FileReader();
 
-        reader.onload = async function (e) {
-            const contents = e.target.result;
-            const lines = contents.split('\n').map(line => line.trim()).filter(line => line !== '');
-            let cardsToCreate = [];
+        function moveCard(cardId, x, y) {
+            const card = document.getElementById(cardId);
+            if (card) {
+                card.style.left = `${x}px`;
+                card.style.top = `${y}px`;
+            } else {
+                console.warn(`Card with ID ${cardId} not found.`);
+            }
+        }
 
-            for (let index = 0; index < lines.length; index++) {
-                const line = lines[index];
-                const [count, ...cardNameParts] = line.split('x').map(part => part.trim());
-                const cardName = cardNameParts.join(' ').trim();
-                const numCards = parseInt(count) || 1;
+        function hashCardName(cardName, index) {
+            let hash = 0;
+            for (let i = 0; i < cardName.length; i++) {
+                const char = cardName.charCodeAt(i);
+                hash = (hash << 5) - hash + char;
+                hash |= 0;
+            }
+            return `${hash}_${index}`;
+        }
 
-                for (let i = 0; i < numCards; i++) {
-                    const cardId = hashCardName(cardName, index + i);
-                    cardsToCreate.push({ cardId, cardName });
+async function uploadDeck(event) {
+    const file = event.target.files[0];
+    const reader = new FileReader();
+
+    reader.onload = async function (e) {
+        const contents = e.target.result;
+        const lines = contents.split('\n').map(line => line.trim()).filter(line => line !== '');
+        let cardsToCreate = [];
+
+        const gameBoardWidth = gameBoard.clientWidth;
+        const gameBoardHeight = gameBoard.clientHeight;
+
+        const centerX = (gameBoardWidth - 63) / 8;
+        const centerY = (gameBoardHeight - 88) / 1.2;
+
+        for (let index = 0; index < lines.length; index++) {
+            const line = lines[index];
+            const [count, ...cardNameParts] = line.split('x').map(part => part.trim());
+            const cardName = cardNameParts.join(' ').trim();
+            const numCards = parseInt(count) || 1;
+
+            for (let i = 0; i < numCards; i++) {
+                const cardId = hashCardName(cardName, index + i);
+                cardsToCreate.push({ cardId, cardName, x: centerX, y: centerY });
+            }
+        }
+
+        shuffleArray(cardsToCreate);
+
+        for (const card of cardsToCreate) {
+            await fetchCardData(card.cardId, card.cardName, card.x, card.y);
+        }
+
+        for (const card of cardsToCreate) {
+            const cardElement = document.getElementById(card.cardId);
+            if (cardElement) {
+                const originalImage = cardElement.dataset.originalImage;
+                const alternateImage = cardElement.dataset.alternateImage;
+                cardElement.style.backgroundImage = `url(${alternateImage})`;
+
+                if (isConnected) {
+                    conn.send({
+                        type: 'toggleImage',
+                        cardId: card.cardId,
+                        newImage: alternateImage
+                    });
                 }
             }
-
-            for (const card of cardsToCreate) {
-                await fetchCardData(card.cardId, card.cardName);
-            }
-        };
-
-        reader.readAsText(file);
-    }
-
-async function fetchCardData(cardId, cardName) {
-        try {
-            const response = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cardName)}`);
-            if (!response.ok) {
-                throw new Error('Card not found');
-            }
-            const cardData = await response.json();
-            const imageUrl = cardData.image_uris.normal;
-
-            createCard(cardId, imageUrl, 50, 50);
-
-            if (isConnected) {
-                conn.send({
-                    type: 'newCard',
-                    cardId: cardId,
-                    imageUrl: imageUrl,
-                    x: 50,
-                    y: 50
-                });
-            }
-        } catch (error) {
-            console.error('Error fetching card data:', error);
-            showMessage('Error: ' + error.message);
         }
+    };
+
+    reader.readAsText(file);
+}
+
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
     }
+}
+
+
+async function fetchCardData(cardId, cardName, x, y) {
+    try {
+        const response = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cardName)}`);
+        if (!response.ok) {
+            throw new Error('Card not found');
+        }
+        const cardData = await response.json();
+        const imageUrl = cardData.image_uris.normal;
+
+        createCard(cardId, imageUrl, x, y);
+
+        if (isConnected) {
+            conn.send({
+                type: 'newCard',
+                cardId: cardId,
+                imageUrl: imageUrl,
+                x: x,
+                y: y
+            });
+        }
+    } catch (error) {
+        console.error('Error fetching card data:', error);
+        showMessage('Error: ' + error.message);
+    }
+}
+
 
 function createCard(cardId, imageUrl, x, y) {
     const existingCard = document.getElementById(cardId);
@@ -327,210 +298,124 @@ function createCard(cardId, imageUrl, x, y) {
         card.style.left = `${x}px`;
         card.style.top = `${y}px`;
 
+        card.dataset.originalImage = imageUrl;
+        card.dataset.alternateImage = "https://backs.scryfall.io/large/2/2/222b7a3b-2321-4d4c-af19-19338b134971.jpg?1677416389";
+
         gameBoard.appendChild(card);
 
         makeCardDraggable(card);
 
-        card.addEventListener('mouseenter', () => showPreview(imageUrl));
+        card.addEventListener('mouseenter', () => showPreview(card.style.backgroundImage));
         card.addEventListener('mouseleave', hidePreview);
 
-        card.addEventListener('touchstart', () => showPreview(imageUrl));
-        card.addEventListener('touchend', hidePreview);
+        card.addEventListener('dblclick', () => {
+            const currentImage = card.style.backgroundImage;
+            const originalImage = card.dataset.originalImage;
+            const alternateImage = card.dataset.alternateImage;
+
+            let newImage;
+            if (currentImage.includes(originalImage)) {
+                newImage = alternateImage;
+            } else {
+                newImage = originalImage;
+            }
+
+            card.style.backgroundImage = `url(${newImage})`;
+
+            if (isConnected) {
+                conn.send({
+                    type: 'toggleImage',
+                    cardId: cardId,
+                    newImage: newImage
+                });
+            }
+        });
     }
 }
 
 
-function showPreview(imageUrl) {
+
+function showPreview(currentImage) {
     const previewDiv = document.getElementById('preview');
     const previewImage = document.getElementById('previewImage');
-    
-    previewImage.src = imageUrl;
+
+    // Set the preview image to the current card's background image
+    previewImage.src = currentImage.replace(/url\(["']?/, '').replace(/["']?\)$/, ''); // Extract the URL
     previewDiv.style.display = 'flex';
 }
 
-function hidePreview() {
-    const previewDiv = document.getElementById('preview');
-    previewDiv.style.display = 'none';
-}
 
-
-let highestZIndex = 1;
-
-function makeCardDraggable(card) {
-    let offsetX, offsetY;
-
-    card.onmousedown = function (e) {
-        e.preventDefault();
-        
-        highestZIndex++;
-        card.style.zIndex = highestZIndex;
-
-        offsetX = e.clientX - card.offsetLeft;
-        offsetY = e.clientY - card.offsetTop;
-
-        document.onmousemove = function (e) {
-            card.style.left = `${e.clientX - offsetX}px`;
-            card.style.top = `${e.clientY - offsetY}px`;
-        };
-
-        document.onmouseup = function () {
-            document.onmousemove = null;
-            document.onmouseup = null;
-
-            if (isConnected) {
-                const cardId = card.id;
-                const x = card.offsetLeft;
-                const y = card.offsetTop;
-
-                conn.send({
-                    type: 'cardMove',
-                    cardId: cardId,
-                    x: x,
-                    y: y
-                });
-            }
-        };
-    };
-
-    card.ontouchstart = function (e) {
-        e.preventDefault();
-        
-        highestZIndex++;
-        card.style.zIndex = highestZIndex;
-
-        const touch = e.touches[0];
-        offsetX = touch.clientX - card.offsetLeft;
-        offsetY = touch.clientY - card.offsetTop;
-
-        document.ontouchmove = function (e) {
-            const touch = e.touches[0];
-            card.style.left = `${touch.clientX - offsetX}px`;
-            card.style.top = `${touch.clientY - offsetY}px`;
-        };
-
-        document.ontouchend = function () {
-            document.ontouchmove = null;
-            document.ontouchend = null;
-
-            if (isConnected) {
-                const cardId = card.id;
-                const x = card.offsetLeft;
-                const y = card.offsetTop;
-
-                conn.send({
-                    type: 'cardMove',
-                    cardId: cardId,
-                    x: x,
-                    y: y
-                });
-            }
-        };
-    };
-}
-
-function displayChatMessage(message) {
-        const messageElement = document.createElement('div');
-        messageElement.textContent = message;
-        chatMessagesDiv.appendChild(messageElement);
-        chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
-    }
-
-function showMessage(message) {
-        messageDiv.textContent = message;
-        messageDiv.style.display = 'block';
-
-        setTimeout(() => {
-            messageDiv.style.display = 'none';
-        }, 3000);
-    }
-
-    uploadBtn.addEventListener('click', () => uploadDeckBtn.click());
-    uploadDeckBtn.addEventListener('change', uploadDeck);
-    connectBtn.addEventListener('click', connectToPeer);
-    copyPeerIdBtn.addEventListener('click', () => navigator.clipboard.writeText(peer.id));
-    chatInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && chatInput.value.trim() !== '') {
-            const message = chatInput.value.trim();
-            displayChatMessage('You: ' + message);
-            if (isConnected) {
-                conn.send({
-                    type: 'chatMessage',
-                    message: message
-                });
-            }
-            chatInput.value = '';
+        function hidePreview() {
+            const previewDiv = document.getElementById('preview');
+            previewDiv.style.display = 'none';
         }
-    });
 
+        let highestZIndex = 1;
 
+        function makeCardDraggable(card) {
+            let offsetX, offsetY;
 
-initPeer();
+            card.onmousedown = function (e) {
+                e.preventDefault();
+                
+                highestZIndex++;
+                card.style.zIndex = highestZIndex;
 
+                offsetX = e.clientX - card.offsetLeft;
+                offsetY = e.clientY - card.offsetTop;
 
+                document.onmousemove = function (e) {
+                    card.style.left = `${e.clientX - offsetX}px`;
+                    card.style.top = `${e.clientY - offsetY}px`;
+                };
 
-function makeChatBoxDraggable(chatBox) {
-    let offsetX, offsetY;
+                document.onmouseup = function () {
+                    document.onmousemove = null;
+                    document.onmouseup = null;
 
-    chatBox.onmousedown = function (e) {
-        if (e.target === chatBox || chatBox.contains(e.target) && e.target !== chatInput) {
-            e.preventDefault();
+                    if (isConnected) {
+                        const cardId = card.id;
+                        const x = card.offsetLeft;
+                        const y = card.offsetTop;
 
-            const rect = chatBox.getBoundingClientRect();
-            offsetX = e.clientX - rect.left;
-            offsetY = e.clientY - rect.top;
-
-            document.onmousemove = function (e) {
-                chatBox.style.left = `${e.clientX - offsetX}px`;
-                chatBox.style.top = `${e.clientY - offsetY}px`;
-            };
-
-            document.onmouseup = function () {
-                document.onmousemove = null;
-                document.onmouseup = null;
+                        conn.send({
+                            type: 'cardMove',
+                            cardId: cardId,
+                            x: x,
+                            y: y
+                        });
+                    }
+                };
             };
         }
-    };
 
-    chatBox.ontouchstart = function (e) {
-        if (e.target === chatBox || (chatBox.contains(e.target) && e.target !== chatInput)) {
-            e.preventDefault();
+        function showMessage(message) {
+            messageDiv.textContent = message;
+            messageDiv.style.display = 'block';
 
-            const touch = e.touches[0];
-            const rect = chatBox.getBoundingClientRect();
-            offsetX = touch.clientX - rect.left;
-            offsetY = touch.clientY - rect.top;
-
-            document.ontouchmove = function (e) {
-                const touch = e.touches[0];
-                chatBox.style.left = `${touch.clientX - offsetX}px`;
-                chatBox.style.top = `${touch.clientY - offsetY}px`;
-            };
-
-            document.ontouchend = function () {
-                document.ontouchmove = null;
-                document.ontouchend = null;
-            };
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
         }
-    };
-}
 
+        menuButton.addEventListener('click', () => {
+            controls.style.display = controls.style.display === 'flex' ? 'none' : 'flex';
+        });
 
-makeChatBoxDraggable(document.getElementById('chatBox'));
+        uploadBtn.addEventListener('click', () => {
+            uploadDeckBtn.click();
+        });
 
-function centerChatBox(chatBox) {
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const chatBoxWidth = chatBox.offsetWidth;
-    const chatBoxHeight = chatBox.offsetHeight;
+        connectBtn.addEventListener('click', connectToPeer);
+        uploadDeckBtn.addEventListener('change', uploadDeck);
+        copyPeerIdBtn.addEventListener('click', () => {
+            const peerId = peer.id;
+            navigator.clipboard.writeText(peerId)
+                .then(() => showMessage('Copied to clipboard!'))
+                .catch(err => console.error('Failed to copy: ', err));
+        });
 
-    chatBox.style.left = `${(viewportWidth - chatBoxWidth) / 2}px`;
-    chatBox.style.top = `${(viewportHeight - chatBoxHeight) / 2}px`;
-}
-
-const chatBox = document.getElementById('chatBox');
-centerChatBox(chatBox);
-
-
-</script>
+        initPeer();
+    </script>
 </body>
 </html>
