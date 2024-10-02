@@ -202,7 +202,7 @@
     let conn;
     let isConnected = false;
 
-    function initPeer() {
+function initPeer() {
         peer = new Peer();
 
         peer.on('open', (id) => {
@@ -215,7 +215,7 @@
         });
     }
 
-    function connectToPeer() {
+function connectToPeer() {
         const peerId = prompt("Enter your opponent's peer ID:");
         if (peerId) {
             conn = peer.connect(peerId);
@@ -223,7 +223,7 @@
         }
     }
 
-    function moveCard(cardId, x, y) {
+function moveCard(cardId, x, y) {
         const card = document.getElementById(cardId);
         if (card) {
             card.style.left = `${x}px`;
@@ -234,8 +234,7 @@
     }
 
 
-
-    function setupConnection() {
+function setupConnection() {
         conn.on('open', () => {
             isConnected = true;
             console.log('Connected to peer');
@@ -253,7 +252,7 @@
         });
     }
 
-    function hashCardName(cardName, index) {
+function hashCardName(cardName, index) {
         let hash = 0;
         for (let i = 0; i < cardName.length; i++) {
             const char = cardName.charCodeAt(i);
@@ -263,7 +262,7 @@
         return `${hash}_${index}`;
     }
 
-    function uploadDeck(event) {
+function uploadDeck(event) {
         const file = event.target.files[0];
         const reader = new FileReader();
 
@@ -292,7 +291,7 @@
         reader.readAsText(file);
     }
 
-    async function fetchCardData(cardId, cardName) {
+async function fetchCardData(cardId, cardName) {
         try {
             const response = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cardName)}`);
             if (!response.ok) {
@@ -359,9 +358,8 @@ let highestZIndex = 1;
 function makeCardDraggable(card) {
     let offsetX, offsetY;
 
-    // Mouse down event
     card.onmousedown = function (e) {
-        e.preventDefault(); // Prevent default behavior (like text selection)
+        e.preventDefault();
         
         highestZIndex++;
         card.style.zIndex = highestZIndex;
@@ -392,7 +390,6 @@ function makeCardDraggable(card) {
             }
         };
     };
-
 
     card.ontouchstart = function (e) {
         e.preventDefault();
@@ -429,8 +426,6 @@ function makeCardDraggable(card) {
         };
     };
 }
-
-
 
     function displayChatMessage(message) {
         const messageElement = document.createElement('div');
