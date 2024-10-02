@@ -336,8 +336,12 @@ function createCard(cardId, imageUrl, x, y) {
 
         card.addEventListener('mouseenter', () => showPreview(imageUrl));
         card.addEventListener('mouseleave', hidePreview);
+
+        card.addEventListener('touchstart', () => showPreview(imageUrl));
+        card.addEventListener('touchend', hidePreview);
     }
 }
+
 
 function showPreview(imageUrl) {
     const previewDiv = document.getElementById('preview');
