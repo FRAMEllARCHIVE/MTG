@@ -85,18 +85,20 @@
             z-index: 1000;
         }
 
-        #chatBox {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            width: 300px;
-            background-color: #222;
-            color: #fff;
-            padding: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-            z-index: 1000;
-            border-radius: 15px;
-        }
+#chatBox {
+    position: absolute;
+    left: 5%;
+    top: 50%;
+    width: 300px;
+    background-color: #222;
+    color: #fff;
+    padding: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    z-index: 1000;
+    border-radius: 15px;
+    cursor: move;
+}
+
 
         #chatMessages {
             max-height: 150px;
@@ -183,11 +185,6 @@
 </div>
 
 <script>
-
-
-
-
-
 
     const gameBoard = document.getElementById('gameBoard');
     const connectBtn = document.getElementById('connectBtn');
@@ -431,14 +428,14 @@ function makeCardDraggable(card) {
     };
 }
 
-    function displayChatMessage(message) {
+function displayChatMessage(message) {
         const messageElement = document.createElement('div');
         messageElement.textContent = message;
         chatMessagesDiv.appendChild(messageElement);
         chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
     }
 
-    function showMessage(message) {
+function showMessage(message) {
         messageDiv.textContent = message;
         messageDiv.style.display = 'block';
 
@@ -465,7 +462,61 @@ function makeCardDraggable(card) {
         }
     });
 
-    initPeer();
+
+
+initPeer();
+
+
+
+function makeChatBoxDraggable(chatBox) {
+    let offsetX, offsetY;
+
+    chatBox.onmousedown = function (e) {
+        if (e.target === chatBox || chatBox.contains(e.target) && e.target !== chatInput) {
+            e.preventDefault();
+
+            const rect = chatBox.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+
+            document.onmousemove = function (e) {
+                chatBox.style.left = `${e.clientX - offsetX}px`;
+                chatBox.style.top = `${e.clientY - offsetY}px`;
+            };
+
+            document.onmouseup = function () {
+                document.onmousemove = null;
+                document.onmouseup = null;
+            };
+        }
+    };
+
+    chatBox.ontouchstart = function (e) {
+        if (e.target === chatBox || (chatBox.contains(e.target) && e.target !== chatInput)) {
+            e.preventDefault();
+
+            const touch = e.touches[0];
+            const rect = chatBox.getBoundingClientRect();
+            offsetX = touch.clientX - rect.left;
+            offsetY = touch.clientY - rect.top;
+
+            document.ontouchmove = function (e) {
+                const touch = e.touches[0];
+                chatBox.style.left = `${touch.clientX - offsetX}px`;
+                chatBox.style.top = `${touch.clientY - offsetY}px`;
+            };
+
+            document.ontouchend = function () {
+                document.ontouchmove = null;
+                document.ontouchend = null;
+            };
+        }
+    };
+}
+
+
+makeChatBoxDraggable(document.getElementById('chatBox'));
+
 
 </script>
 </body>
