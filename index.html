@@ -517,6 +517,19 @@ function makeChatBoxDraggable(chatBox) {
 
 makeChatBoxDraggable(document.getElementById('chatBox'));
 
+function centerChatBox(chatBox) {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const chatBoxWidth = chatBox.offsetWidth;
+    const chatBoxHeight = chatBox.offsetHeight;
+
+    chatBox.style.left = `${(viewportWidth - chatBoxWidth) / 2}px`;
+    chatBox.style.top = `${(viewportHeight - chatBoxHeight) / 2}px`;
+}
+
+const chatBox = document.getElementById('chatBox');
+centerChatBox(chatBox);
+
 
 </script>
 </body>
