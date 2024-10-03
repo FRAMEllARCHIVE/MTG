@@ -119,7 +119,6 @@
     <div id="controls">
         <input type="file" id="uploadDeckBtn" accept=".txt" style="display: none;" />
         <button id="uploadBtn">UPLOAD</button>
-        <button id="connectBtn">CONNECT</button>
         <button id="copyPeerIdBtn">LINK</button>
     </div>
     <div id="gameBoard"></div>
@@ -509,8 +508,6 @@ function connectToPeer(peerId = null) {
         uploadBtn.addEventListener('click', () => {
             uploadDeckBtn.click();
         });
-
-        connectBtn.addEventListener('click', connectToPeer);
 
         uploadDeckBtn.addEventListener('change', uploadDeck);
 
