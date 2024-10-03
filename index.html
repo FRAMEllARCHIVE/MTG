@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MTG</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.3.2/peerjs.min.js"></script>
-    <style>
+
+<style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -16,8 +17,8 @@
         }
 
         #gameBoard {
-            width: 100vw;
-            height: 100vh;
+            width: 99vw;
+            height: 99vh;
             position: relative;
             overflow: hidden;
         }
@@ -30,6 +31,17 @@
             cursor: move;
             transition: transform 0.2s;
             border-radius: 4px;
+        }
+
+        .card.selected {
+            box-shadow: 0 0 2px 1px #00ff00;
+        }
+
+        #selectionBox {
+            position: absolute;
+            border: 1px dashed #00ff00;
+            background-color: rgba(0, 255, 0, 0.01);
+            pointer-events: none;
         }
 
         #preview {
@@ -74,19 +86,19 @@
             cursor: pointer;
         }
 
-#menuButton {
-    position: fixed;
-    top: 10px;
-    left: 20px;
-    z-index: 1000;
-    background-color: transparent;
-    color: white;
-    padding: 15px 5px;
-    border: none;
-    cursor: pointer;
-    font-size: 32px;
-    border-radius: 5px;
-}
+        #menuButton {
+            position: fixed;
+            top: 10px;
+            left: 20px;
+            z-index: 1000;
+            background-color: transparent;
+            color: white;
+            padding: 15px 5px;
+            border: none;
+            cursor: pointer;
+            font-size: 32px;
+            border-radius: 5px;
+        }
 
         #message {
             position: fixed;
@@ -103,7 +115,7 @@
     </style>
 </head>
 <body>
-    <button id="menuButton">&#9776;</button>
+    <button id="menuButton">☰</button>
     <div id="controls">
         <input type="file" id="uploadDeckBtn" accept=".txt" style="display: none;" />
         <button id="uploadBtn">UPLOAD</button>
@@ -112,10 +124,10 @@
     </div>
     <div id="gameBoard"></div>
     <div id="message"></div>
-
     <div id="preview">
         <img id="previewImage" src="" alt="Card Preview" />
     </div>
+    <div id="selectionBox"></div>
 
     <script>
         const gameBoard = document.getElementById('gameBoard');
@@ -126,10 +138,14 @@
         const messageDiv = document.getElementById('message');
         const controls = document.getElementById('controls');
         const menuButton = document.getElementById('menuButton');
+        const selectionBox = document.getElementById('selectionBox');
 
         let peer;
         let conn;
         let isConnected = false;
+        let isSelecting = false;
+        let startX, startY;
+        let selectedCards = [];
 
         function initPeer() {
             peer = new Peer();
@@ -144,44 +160,66 @@
             });
         }
 
-        function connectToPeer() {
-            const peerId = prompt("Enter your opponent's peer ID:");
-            if (peerId) {
-                conn = peer.connect(peerId);
-                setupConnection();
-            }
-        }
-
-function setupConnection() {
-    conn.on('open', () => {
-        isConnected = true;
-        console.log('Connected to peer');
-        showMessage('Connected to opponent!');
-    });
-
-    conn.on('data', (data) => {
-        if (data.type === 'cardMove') {
-            moveCard(data.cardId, data.x, data.y);
-        } else if (data.type === 'newCard') {
-            createCard(data.cardId, data.imageUrl, data.x, data.y);
-        } else if (data.type === 'toggleImage') {
-            // Handle the image toggle message
-            const card = document.getElementById(data.cardId);
-            if (card) {
-                card.style.backgroundImage = `url(${data.newImage})`;
-            }
-        }
-    });
+function connectToPeer(peerId = null) {
+    if (!peerId) {
+        peerId = prompt("Enter your opponent's peer ID:");
+    }
+    if (peerId) {
+        conn = peer.connect(peerId);
+        setupConnection();
+    }
 }
 
+        function setupConnection() {
+            conn.on('open', () => {
+                isConnected = true;
+                console.log('Connected to peer');
+                showMessage('Connected to opponent!');
+                syncInitialState();
+            });
 
-        function moveCard(cardId, x, y) {
-            const card = document.getElementById(cardId);
-            if (card) {
-                card.style.left = `${x}px`;
-                card.style.top = `${y}px`;
-            } else {
-                console.warn(`Card with ID ${cardId} not found.`);
+            conn.on('data', (data) => {
+                if (data.type === 'cardMove') {
+                    moveCards(data.cardData);
+                } else if (data.type === 'newCard') {
+                    createCard(data.cardId, data.imageUrl, data.x, data.y);
+                } else if (data.type === 'toggleImage') {
+                    const card = document.getElementById(data.cardId);
+                    if (card) {
+                        card.style.backgroundImage = `url(${data.newImage})`;
+                    }
+                } else if (data.type === 'initialSync') {
+                    data.cardData.forEach(cardInfo => {
+                        createCard(cardInfo.cardId, cardInfo.imageUrl, cardInfo.x, cardInfo.y);
+                    });
+                }
+            });
+        }
+
+        function moveCards(cardData) {
+            cardData.forEach(({ cardId, x, y }) => {
+                const card = document.getElementById(cardId);
+                if (card) {
+                    card.style.left = `${x}px`;
+                    card.style.top = `${y}px`;
+                }
+            });
+        }
+
+        function syncInitialState() {
+            if (isConnected) {
+                const allCards = Array.from(document.querySelectorAll('.card'));
+                const cardData = allCards.map(card => ({
+                    cardId: card.id,
+                    imageUrl: card.style.backgroundImage.slice(5, -2),
+                    x: card.offsetLeft,
+                    y: card.offsetTop
+                }));
+
+                conn.send({
+                    type: 'initialSync',
+                    cardData: cardData
+                });
             }
         }
 
@@ -195,155 +233,146 @@ function setupConnection() {
             return `${hash}_${index}`;
         }
 
-async function uploadDeck(event) {
-    const file = event.target.files[0];
-    const reader = new FileReader();
+        async function uploadDeck(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
 
-    reader.onload = async function (e) {
-        const contents = e.target.result;
-        const lines = contents.split('\n').map(line => line.trim()).filter(line => line !== '');
-        let cardsToCreate = [];
+            reader.onload = async function (e) {
+                const contents = e.target.result;
+                const lines = contents.split('\n').map(line => line.trim()).filter(line => line !== '');
+                let cardsToCreate = [];
 
-        const gameBoardWidth = gameBoard.clientWidth;
-        const gameBoardHeight = gameBoard.clientHeight;
+                const gameBoardWidth = gameBoard.clientWidth;
+                const gameBoardHeight = gameBoard.clientHeight;
 
-        const centerX = (gameBoardWidth - 63) / 8;
-        const centerY = (gameBoardHeight - 88) / 1.2;
+                const centerX = (gameBoardWidth - 63) / 8;
+                const centerY = (gameBoardHeight - 88) / 1.2;
 
-        for (let index = 0; index < lines.length; index++) {
-            const line = lines[index];
-            const [count, ...cardNameParts] = line.split('x').map(part => part.trim());
-            const cardName = cardNameParts.join(' ').trim();
-            const numCards = parseInt(count) || 1;
+                for (let index = 0; index < lines.length; index++) {
+                    const line = lines[index];
+                    const [count, ...cardNameParts] = line.split('x').map(part => part.trim());
+                    const cardName = cardNameParts.join(' ').trim();
+                    const numCards = parseInt(count) || 1;
 
-            for (let i = 0; i < numCards; i++) {
-                const cardId = hashCardName(cardName, index + i);
-                cardsToCreate.push({ cardId, cardName, x: centerX, y: centerY });
+                    for (let i = 0; i < numCards; i++) {
+                        const cardId = hashCardName(cardName, index + i);
+                        cardsToCreate.push({ cardId, cardName, x: centerX, y: centerY });
+                    }
+                }
+
+                shuffleArray(cardsToCreate);
+
+                for (const card of cardsToCreate) {
+                    await fetchCardData(card.cardId, card.cardName, card.x, card.y);
+                }
+
+                for (const card of cardsToCreate) {
+                    const cardElement = document.getElementById(card.cardId);
+                    if (cardElement) {
+                        const originalImage = cardElement.dataset.originalImage;
+                        const alternateImage = cardElement.dataset.alternateImage;
+                        cardElement.style.backgroundImage = `url(${alternateImage})`;
+
+                        if (isConnected) {
+                            conn.send({
+                                type: 'toggleImage',
+                                cardId: card.cardId,
+                                newImage: alternateImage
+                            });
+                        }
+                    }
+                }
+            };
+
+            reader.readAsText(file);
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
             }
         }
 
-        shuffleArray(cardsToCreate);
+        async function fetchCardData(cardId, cardName, x, y) {
+            try {
+                const response = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cardName)}`);
+                if (!response.ok) {
+                    throw new Error('Card not found');
+                }
+                const cardData = await response.json();
+                const imageUrl = cardData.image_uris.normal;
 
-        for (const card of cardsToCreate) {
-            await fetchCardData(card.cardId, card.cardName, card.x, card.y);
-        }
-
-        for (const card of cardsToCreate) {
-            const cardElement = document.getElementById(card.cardId);
-            if (cardElement) {
-                const originalImage = cardElement.dataset.originalImage;
-                const alternateImage = cardElement.dataset.alternateImage;
-                cardElement.style.backgroundImage = `url(${alternateImage})`;
+                createCard(cardId, imageUrl, x, y);
 
                 if (isConnected) {
                     conn.send({
-                        type: 'toggleImage',
-                        cardId: card.cardId,
-                        newImage: alternateImage
+                        type: 'newCard',
+                        cardId: cardId,
+                        imageUrl: imageUrl,
+                        x: x,
+                        y: y
                     });
                 }
+            } catch (error) {
+                console.error('Error fetching card data:', error);
+                showMessage('Error: ' + error.message);
             }
         }
-    };
 
-    reader.readAsText(file);
-}
-
-
-function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-}
-
-
-async function fetchCardData(cardId, cardName, x, y) {
-    try {
-        const response = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cardName)}`);
-        if (!response.ok) {
-            throw new Error('Card not found');
-        }
-        const cardData = await response.json();
-        const imageUrl = cardData.image_uris.normal;
-
-        createCard(cardId, imageUrl, x, y);
-
-        if (isConnected) {
-            conn.send({
-                type: 'newCard',
-                cardId: cardId,
-                imageUrl: imageUrl,
-                x: x,
-                y: y
-            });
-        }
-    } catch (error) {
-        console.error('Error fetching card data:', error);
-        showMessage('Error: ' + error.message);
-    }
-}
-
-
-function createCard(cardId, imageUrl, x, y) {
-    const existingCard = document.getElementById(cardId);
-    if (existingCard) {
-        existingCard.style.left = `${x}px`;
-        existingCard.style.top = `${y}px`;
-    } else {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.id = cardId;
-        card.style.backgroundImage = `url(${imageUrl})`;
-        card.style.left = `${x}px`;
-        card.style.top = `${y}px`;
-
-        card.dataset.originalImage = imageUrl;
-        card.dataset.alternateImage = "https://backs.scryfall.io/large/2/2/222b7a3b-2321-4d4c-af19-19338b134971.jpg?1677416389";
-
-        gameBoard.appendChild(card);
-
-        makeCardDraggable(card);
-
-        card.addEventListener('mouseenter', () => showPreview(card.style.backgroundImage));
-        card.addEventListener('mouseleave', hidePreview);
-
-        card.addEventListener('dblclick', () => {
-            const currentImage = card.style.backgroundImage;
-            const originalImage = card.dataset.originalImage;
-            const alternateImage = card.dataset.alternateImage;
-
-            let newImage;
-            if (currentImage.includes(originalImage)) {
-                newImage = alternateImage;
+        function createCard(cardId, imageUrl, x, y) {
+            const existingCard = document.getElementById(cardId);
+            if (existingCard) {
+                existingCard.style.left = `${x}px`;
+                existingCard.style.top = `${y}px`;
             } else {
-                newImage = originalImage;
-            }
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.id = cardId;
+                card.style.backgroundImage = `url(${imageUrl})`;
+                card.style.left = `${x}px`;
+                card.style.top = `${y}px`;
 
-            card.style.backgroundImage = `url(${newImage})`;
+                card.dataset.originalImage = imageUrl;
+                card.dataset.alternateImage = "https://backs.scryfall.io/large/2/2/222b7a3b-2321-4d4c-af19-19338b134971.jpg?1677416389";
 
-            if (isConnected) {
-                conn.send({
-                    type: 'toggleImage',
-                    cardId: cardId,
-                    newImage: newImage
+                gameBoard.appendChild(card);
+
+                card.addEventListener('mouseenter', () => showPreview(card.style.backgroundImage));
+                card.addEventListener('mouseleave', hidePreview);
+
+                card.addEventListener('dblclick', () => {
+                    const currentImage = card.style.backgroundImage;
+                    const originalImage = card.dataset.originalImage;
+                    const alternateImage = card.dataset.alternateImage;
+
+                    let newImage;
+                    if (currentImage.includes(originalImage)) {
+                        newImage = alternateImage;
+                    } else {
+                        newImage = originalImage;
+                    }
+
+                    card.style.backgroundImage = `url(${newImage})`;
+
+                    if (isConnected) {
+                        conn.send({
+                            type: 'toggleImage',
+                            cardId: cardId,
+                            newImage: newImage
+                        });
+                    }
                 });
             }
-        });
-    }
-}
+        }
 
+        function showPreview(currentImage) {
+            const previewDiv = document.getElementById('preview');
+            const previewImage = document.getElementById('previewImage');
 
-
-function showPreview(currentImage) {
-    const previewDiv = document.getElementById('preview');
-    const previewImage = document.getElementById('previewImage');
-
-    // Set the preview image to the current card's background image
-    previewImage.src = currentImage.replace(/url\(["']?/, '').replace(/["']?\)$/, ''); // Extract the URL
-    previewDiv.style.display = 'flex';
-}
-
+            previewImage.src = currentImage.replace(/url\(["']?/, '').replace(/["']?\)$/, '');
+            previewDiv.style.display = 'flex';
+        }
 
         function hidePreview() {
             const previewDiv = document.getElementById('preview');
@@ -352,41 +381,116 @@ function showPreview(currentImage) {
 
         let highestZIndex = 1;
 
-        function makeCardDraggable(card) {
-            let offsetX, offsetY;
+        gameBoard.addEventListener('mousedown', startSelection);
+        gameBoard.addEventListener('mousemove', updateSelection);
+        gameBoard.addEventListener('mouseup', endSelection);
 
-            card.onmousedown = function (e) {
-                e.preventDefault();
-                
-                highestZIndex++;
+        function startSelection(e) {
+            if (e.target.classList.contains('card')) {
+                return;
+            }
+            isSelecting = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            selectionBox.style.left = startX + 'px';
+            selectionBox.style.top = startY + 'px';
+            selectionBox.style.width = '0px';
+            selectionBox.style.height = '0px';
+            selectionBox.style.display = 'block';
+        }
+
+        function updateSelection(e) {
+            if (!isSelecting) return;
+
+            const currentX = e.clientX;
+            const currentY = e.clientY;
+
+            const width = Math.abs(currentX - startX);
+            const height = Math.abs(currentY - startY);
+
+            selectionBox.style.width = width + 'px';
+            selectionBox.style.height = height + 'px';
+            selectionBox.style.left = (currentX > startX ? startX : currentX) + 'px';
+            selectionBox.style.top = (currentY > startY ? startY : currentY) + 'px';
+
+            const selectionRect = selectionBox.getBoundingClientRect();
+
+            document.querySelectorAll('.card').forEach(card => {
+                const cardRect = card.getBoundingClientRect();
+                if (
+                    cardRect.left < selectionRect.right &&
+                    cardRect.right > selectionRect.left &&
+                    cardRect.top < selectionRect.bottom &&
+                    cardRect.bottom > selectionRect.top
+                ) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+            });
+        }
+
+        function endSelection() {
+            if (!isSelecting) return;
+            isSelecting = false;
+            selectionBox.style.display = 'none';
+            selectedCards = Array.from(document.querySelectorAll('.card.selected'));
+            highestZIndex++;
+            selectedCards.forEach(card => {
                 card.style.zIndex = highestZIndex;
+            });
+        }
 
-                offsetX = e.clientX - card.offsetLeft;
-                offsetY = e.clientY - card.offsetTop;
+        gameBoard.addEventListener('mousedown', startDrag);
 
-                document.onmousemove = function (e) {
-                    card.style.left = `${e.clientX - offsetX}px`;
-                    card.style.top = `${e.clientY - offsetY}px`;
-                };
+        function startDrag(e) {
+            if (!e.target.classList.contains('card')) return;
 
-                document.onmouseup = function () {
-                    document.onmousemove = null;
-                    document.onmouseup = null;
+            const card = e.target;
+            if (!card.classList.contains('selected')) {
+                document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedCards = [card];
+            }
 
-                    if (isConnected) {
-                        const cardId = card.id;
-                        const x = card.offsetLeft;
-                        const y = card.offsetTop;
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const initialPositions = selectedCards.map(c => ({
+                card: c,
+                startLeft: c.offsetLeft,
+                startTop: c.offsetTop
+            }));
 
-                        conn.send({
-                            type: 'cardMove',
-                            cardId: cardId,
-                            x: x,
-                            y: y
-                        });
-                    }
-                };
-            };
+            function dragMove(e) {
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+
+                initialPositions.forEach(({ card, startLeft, startTop }) => {
+                    card.style.left = `${startLeft + dx}px`;
+                    card.style.top = `${startTop + dy}px`;
+                });
+            }
+
+            function dragEnd() {
+                document.removeEventListener('mousemove', dragMove);
+                document.removeEventListener('mouseup', dragEnd);
+
+                if (isConnected) {
+                    const cardData = selectedCards.map(card => ({
+                        cardId: card.id,
+                        x: card.offsetLeft,
+                        y: card.offsetTop
+                    }));
+
+                    conn.send({
+                        type: 'cardMove',
+                        cardData: cardData
+                    });
+                }
+            }
+
+            document.addEventListener('mousemove', dragMove);
+            document.addEventListener('mouseup', dragEnd);
         }
 
         function showMessage(message) {
@@ -415,8 +519,26 @@ function showPreview(currentImage) {
                 .catch(err => console.error('Failed to copy: ', err));
         });
 
-        initPeer();
-        
-    </script>
+
+
+
+
+function handleHashChange() {
+    const hash = window.location.hash.substring(1).trim();
+
+    if (hash) {
+        connectToPeer(hash);
+    }
+}
+
+window.addEventListener('hashchange', handleHashChange);
+
+
+
+
+initPeer();
+
+
+</script>
 </body>
 </html>
