@@ -511,13 +511,18 @@ function connectToPeer(peerId = null) {
         });
 
         connectBtn.addEventListener('click', connectToPeer);
+
         uploadDeckBtn.addEventListener('change', uploadDeck);
-        copyPeerIdBtn.addEventListener('click', () => {
-            const peerId = peer.id;
-            navigator.clipboard.writeText(peerId)
-                .then(() => showMessage('Copied to clipboard!'))
-                .catch(err => console.error('Failed to copy: ', err));
-        });
+
+copyPeerIdBtn.addEventListener('click', () => {
+    const peerId = peer.id;
+    const link = `https://framellarchive.github.io/MTG/#${peerId}`;
+    
+    navigator.clipboard.writeText(link)
+        .then(() => showMessage('Link copied to clipboard: ' + link))
+        .catch(err => console.error('Failed to copy: ', err));
+});
+
 
 
 
