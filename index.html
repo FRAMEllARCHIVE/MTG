@@ -563,18 +563,19 @@ function makeCardDraggable(cardElement) {
 
 
 function handleCardInBottomArea(card) {
-
+    // Send a message to delete the card from the opponent's view
     if (isConnected) {
         conn.send({
             type: 'deleteCard',
             cardId: card.id
         });
     }
+
     card.remove();
 
     const cardBottomDisplay = document.createElement('div');
     cardBottomDisplay.className = 'card';
-    cardBottomDisplay.id = `bottom-${card.id}`;
+    cardBottomDisplay.id = `bottom-${card.id}`; // Use the existing ID prefix
     cardBottomDisplay.style.backgroundImage = card.style.backgroundImage;
 
     cardBottomDisplay.dataset.originalImage = card.dataset.originalImage;
@@ -598,9 +599,33 @@ function handleCardInBottomArea(card) {
         }
 
         cardBottomDisplay.style.backgroundImage = `url(${newImage})`;
+    });
 
+    // New: Handle card placement back to the game board
+    cardBottomDisplay.addEventListener('mouseup', (e) => {
+        const gameBoardHeight = gameBoard.clientHeight;
+        const bottomThreshold = gameBoardHeight * 0.95;
+        const cardRect = cardBottomDisplay.getBoundingClientRect();
+        const cardBottom = cardRect.top + cardRect.height;
+
+        if (cardBottom < bottomThreshold) {
+            createCard(card.id.replace('bottom-', ''), card.dataset.originalImage, e.clientX, e.clientY);
+
+            if (isConnected) {
+                conn.send({
+                    type: 'newCard',
+                    cardId: card.id.replace('bottom-', ''),
+                    imageUrl: card.dataset.originalImage,
+                    x: e.clientX,
+                    y: e.clientY
+                });
+            }
+
+            cardBottomDisplay.remove(); // Remove the temporary display card
+        }
     });
 }
+
 
 
 function dragEnd() {
@@ -666,9 +691,8 @@ function handleHashChange() {
     }
 }
 
-window.addEventListener('load', handleHashChange);
-
 window.addEventListener('hashchange', handleHashChange);
+
 
 
 
