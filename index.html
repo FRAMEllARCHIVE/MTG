@@ -1,13 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <base href="https://scryfall.com/">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MTG</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.3.2/peerjs.min.js"></script>
-
-<style>
+<html><head><base href="https://scryfall.com/"><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>MTG</title><script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.3.2/peerjs.min.js"></script><style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -112,25 +103,29 @@
             z-index: 1000;
         }
 
-#bottom-area {
-    position: fixed;
-    bottom: 188px;
-    left: 50%;
-    z-index: 1000;
-}
+        #bottom-area {
+            position: fixed;
+            bottom: 188px;
+            left: 50%;
+            z-index: 1000;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            height: 176px;
+            pointer-events: none;
+        }
 
-#bottom-area .card {
-    width: 126px;
-    height: 176px;
-    background-size: cover;
-    background-position: center;
-}
-
-
-
-    </style>
-</head>
-<body>
+        #bottom-area .card {
+            width: 126px;
+            height: 176px;
+            background-size: cover;
+            background-position: center;
+            pointer-events: auto;
+            position: relative;
+            margin: 0 5px;
+        }
+    </style></head><body>
     <button id="menuButton">☰</button>
     <div id="controls">
         <input type="file" id="uploadDeckBtn" accept=".txt" style="display: none;" />
@@ -144,11 +139,9 @@
     </div>
     <div id="selectionBox"></div>
 
-<div id="bottom-area"></div>
-
+    <div id="bottom-area"></div>
 
     <script>
-
         const gameBoard = document.getElementById('gameBoard');
         const connectBtn = document.getElementById('connectBtn');
         const uploadDeckBtn = document.getElementById('uploadDeckBtn');
@@ -179,17 +172,17 @@
             });
         }
 
-function connectToPeer(peerId = null) {
-    if (!peerId) {
-        peerId = prompt("Enter your opponent's peer ID:");
-    }
-    if (peerId) {
-        conn = peer.connect(peerId);
-        setupConnection();
-    }
-}
+        function connectToPeer(peerId = null) {
+            if (!peerId) {
+                peerId = prompt("Enter your opponent's peer ID:");
+            }
+            if (peerId) {
+                conn = peer.connect(peerId);
+                setupConnection();
+            }
+        }
 
-function setupConnection() {
+        function setupConnection() {
             conn.on('open', () => {
                 isConnected = true;
                 console.log('Connected to peer');
@@ -197,31 +190,30 @@ function setupConnection() {
                 syncInitialState();
             });
 
-conn.on('data', (data) => {
-    if (data.type === 'deleteCard') {
-        const card = document.getElementById(data.cardId);
-        if (card) {
-            card.remove();  // Remove the card from the opponent's view
+            conn.on('data', (data) => {
+                if (data.type === 'deleteCard') {
+                    const card = document.getElementById(data.cardId);
+                    if (card) {
+                        card.remove();
+                    }
+                } else if (data.type === 'cardMove') {
+                    moveCards(data.cardData);
+                } else if (data.type === 'newCard') {
+                    createCard(data.cardId, data.imageUrl, data.x, data.y);
+                } else if (data.type === 'toggleImage') {
+                    const card = document.getElementById(data.cardId);
+                    if (card) {
+                        card.style.backgroundImage = `url(${data.newImage})`;
+                    }
+                } else if (data.type === 'initialSync') {
+                    data.cardData.forEach(cardInfo => {
+                        createCard(cardInfo.cardId, cardInfo.imageUrl, cardInfo.x, cardInfo.y);
+                    });
+                }
+            });
         }
-    } else if (data.type === 'cardMove') {
-        moveCards(data.cardData);
-    } else if (data.type === 'newCard') {
-        createCard(data.cardId, data.imageUrl, data.x, data.y);
-    } else if (data.type === 'toggleImage') {
-        const card = document.getElementById(data.cardId);
-        if (card) {
-            card.style.backgroundImage = `url(${data.newImage})`;
-        }
-    } else if (data.type === 'initialSync') {
-        data.cardData.forEach(cardInfo => {
-            createCard(cardInfo.cardId, cardInfo.imageUrl, cardInfo.x, cardInfo.y);
-        });
-    }
-});
 
-        }
-
-function moveCards(cardData) {
+        function moveCards(cardData) {
             cardData.forEach(({ cardId, x, y }) => {
                 const card = document.getElementById(cardId);
                 if (card) {
@@ -231,7 +223,7 @@ function moveCards(cardData) {
             });
         }
 
-function syncInitialState() {
+        function syncInitialState() {
             if (isConnected) {
                 const allCards = Array.from(document.querySelectorAll('.card'));
                 const cardData = allCards.map(card => ({
@@ -248,7 +240,7 @@ function syncInitialState() {
             }
         }
 
-function hashCardName(cardName, index) {
+        function hashCardName(cardName, index) {
             let hash = 0;
             for (let i = 0; i < cardName.length; i++) {
                 const char = cardName.charCodeAt(i);
@@ -258,7 +250,7 @@ function hashCardName(cardName, index) {
             return `${hash}_${index}`;
         }
 
-async function uploadDeck(event) {
+        async function uploadDeck(event) {
             const file = event.target.files[0];
             const reader = new FileReader();
 
@@ -312,14 +304,14 @@ async function uploadDeck(event) {
             reader.readAsText(file);
         }
 
-function shuffleArray(array) {
+        function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [array[i], array[j]] = [array[j], array[i]];
             }
         }
 
-async function fetchCardData(cardId, cardName, x, y) {
+        async function fetchCardData(cardId, cardName, x, y) {
             try {
                 const response = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cardName)}`);
                 if (!response.ok) {
@@ -345,7 +337,7 @@ async function fetchCardData(cardId, cardName, x, y) {
             }
         }
 
-function createCard(cardId, imageUrl, x, y) {
+        function createCard(cardId, imageUrl, x, y) {
             const existingCard = document.getElementById(cardId);
             if (existingCard) {
                 existingCard.style.left = `${x}px`;
@@ -391,7 +383,7 @@ function createCard(cardId, imageUrl, x, y) {
             }
         }
 
-function showPreview(currentImage) {
+        function showPreview(currentImage) {
             const previewDiv = document.getElementById('preview');
             const previewImage = document.getElementById('previewImage');
 
@@ -399,7 +391,7 @@ function showPreview(currentImage) {
             previewDiv.style.display = 'flex';
         }
 
-function hidePreview() {
+        function hidePreview() {
             const previewDiv = document.getElementById('preview');
             previewDiv.style.display = 'none';
         }
@@ -410,7 +402,7 @@ function hidePreview() {
         gameBoard.addEventListener('mousemove', updateSelection);
         gameBoard.addEventListener('mouseup', endSelection);
 
-function startSelection(e) {
+        function startSelection(e) {
             if (e.target.classList.contains('card')) {
                 return;
             }
@@ -424,7 +416,7 @@ function startSelection(e) {
             selectionBox.style.display = 'block';
         }
 
-function updateSelection(e) {
+        function updateSelection(e) {
             if (!isSelecting) return;
 
             const currentX = e.clientX;
@@ -455,7 +447,7 @@ function updateSelection(e) {
             });
         }
 
-function endSelection() {
+        function endSelection() {
             if (!isSelecting) return;
             isSelecting = false;
             selectionBox.style.display = 'none';
@@ -468,7 +460,7 @@ function endSelection() {
 
         gameBoard.addEventListener('mousedown', startDrag);
 
-function startDrag(e) {
+        function startDrag(e) {
             if (!e.target.classList.contains('card')) return;
 
             const card = e.target;
@@ -496,166 +488,132 @@ function startDrag(e) {
                 });
             }
 
-function listenForBottomPlacement(card) {
-    const gameBoardHeight = gameBoard.clientHeight;
-    const bottomThreshold = gameBoardHeight * 0.95;
+            function listenForBottomPlacement(card) {
+                const gameBoardHeight = gameBoard.clientHeight;
+                const bottomThreshold = gameBoardHeight * 0.95;
 
-    const cardRect = card.getBoundingClientRect();
-    const cardBottom = cardRect.top + cardRect.height;
+                const cardRect = card.getBoundingClientRect();
+                const cardBottom = cardRect.top + cardRect.height;
 
-    if (cardBottom >= bottomThreshold) {
-        handleCardInBottomArea(card);
-    }
-}
-
-function makeCardDraggable(cardElement) {
-    let isDragging = false;
-    let startX, startY, currentX, currentY;
-
-    cardElement.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        startX = e.clientX - cardElement.offsetLeft;
-        startY = e.clientY - cardElement.offsetTop;
-        cardElement.style.cursor = 'grabbing';
-        cardElement.style.position = 'absolute';
-    });
-
-    document.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        
-
-        currentX = e.clientX - startX;
-        currentY = e.clientY - startY;
-        cardElement.style.left = `${currentX}px`;
-
-        if (Math.abs(currentY) >= 111) {
-            isDragging = false;
-            cardElement.style.cursor = 'grab';
-
-
-            cardElement.remove();
-
-
-            const cardId = cardElement.id.replace('bottom-', '');
-            const cardImage = cardElement.dataset.originalImage;
-
-
-            createCard(cardId, cardImage, e.clientX, e.clientY);
-
-            if (isConnected) {
-
-                conn.send({
-                    type: 'createCard',
-                    cardId: cardId,
-                    imageUrl: cardImage,
-                    x: e.clientX,
-                    y: e.clientY
-                });
+                if (cardBottom >= bottomThreshold) {
+                    handleCardInBottomArea(card);
+                }
             }
-        }
-    });
 
-    document.addEventListener('mouseup', () => {
-        isDragging = false;
-        cardElement.style.cursor = 'grab';
-    });
-}
+            function makeCardDraggable(cardElement) {
+                let isDragging = false;
+                let startX, startY, currentX, currentY;
 
+                cardElement.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    startX = e.clientX - cardElement.offsetLeft;
+                    startY = e.clientY - cardElement.offsetTop;
+                    cardElement.style.cursor = 'grabbing';
+                    cardElement.style.position = 'absolute';
+                });
 
-function handleCardInBottomArea(card) {
-    // Send a message to delete the card from the opponent's view
-    if (isConnected) {
-        conn.send({
-            type: 'deleteCard',
-            cardId: card.id
-        });
-    }
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    
 
-    card.remove();
+                    currentX = e.clientX - startX;
+                    currentY = e.clientY - startY;
+                    cardElement.style.left = `${currentX}px`;
 
-    const cardBottomDisplay = document.createElement('div');
-    cardBottomDisplay.className = 'card';
-    cardBottomDisplay.id = `bottom-${card.id}`; // Use the existing ID prefix
-    cardBottomDisplay.style.backgroundImage = card.style.backgroundImage;
+                    if (currentY <= -111) {
+                        isDragging = false;
+                        cardElement.style.cursor = 'grab';
 
-    cardBottomDisplay.dataset.originalImage = card.dataset.originalImage;
-    cardBottomDisplay.dataset.alternateImage = card.dataset.alternateImage;
+                        cardElement.remove();
 
-    const bottomArea = document.getElementById('bottom-area');
-    bottomArea.appendChild(cardBottomDisplay);
+                        const cardId = cardElement.id.replace('bottom-', '');
+                        const cardImage = cardElement.dataset.originalImage;
 
-    makeCardDraggable(cardBottomDisplay);
+                        createCard(cardId, cardImage, e.clientX, e.clientY);
 
-    cardBottomDisplay.addEventListener('dblclick', () => {
-        const currentImage = cardBottomDisplay.style.backgroundImage;
-        const originalImage = cardBottomDisplay.dataset.originalImage;
-        const alternateImage = cardBottomDisplay.dataset.alternateImage;
+                        if (isConnected) {
+                            conn.send({
+                                type: 'createCard',
+                                cardId: cardId,
+                                imageUrl: cardImage,
+                                x: e.clientX,
+                                y: e.clientY
+                            });
+                        }
+                    }
+                });
 
-        let newImage;
-        if (currentImage.includes(originalImage)) {
-            newImage = alternateImage;
-        } else {
-            newImage = originalImage;
-        }
-
-        cardBottomDisplay.style.backgroundImage = `url(${newImage})`;
-    });
-
-    // New: Handle card placement back to the game board
-    cardBottomDisplay.addEventListener('mouseup', (e) => {
-        const gameBoardHeight = gameBoard.clientHeight;
-        const bottomThreshold = gameBoardHeight * 0.95;
-        const cardRect = cardBottomDisplay.getBoundingClientRect();
-        const cardBottom = cardRect.top + cardRect.height;
-
-        if (cardBottom < bottomThreshold) {
-            createCard(card.id.replace('bottom-', ''), card.dataset.originalImage, e.clientX, e.clientY);
-
-            if (isConnected) {
-                conn.send({
-                    type: 'newCard',
-                    cardId: card.id.replace('bottom-', ''),
-                    imageUrl: card.dataset.originalImage,
-                    x: e.clientX,
-                    y: e.clientY
+                document.addEventListener('mouseup', () => {
+                    isDragging = false;
+                    cardElement.style.cursor = 'grab';
                 });
             }
 
-            cardBottomDisplay.remove(); // Remove the temporary display card
-        }
-    });
-}
+            function handleCardInBottomArea(card) {
+                if (isConnected) {
+                    conn.send({
+                        type: 'deleteCard',
+                        cardId: card.id
+                    });
+                }
+                card.remove();
 
+                const cardBottomDisplay = document.createElement('div');
+                cardBottomDisplay.className = 'card';
+                cardBottomDisplay.id = `bottom-${card.id}`;
+                cardBottomDisplay.style.backgroundImage = card.style.backgroundImage;
 
+                cardBottomDisplay.dataset.originalImage = card.dataset.originalImage;
+                cardBottomDisplay.dataset.alternateImage = card.dataset.alternateImage;
 
-function dragEnd() {
-    document.removeEventListener('mousemove', dragMove);
-    document.removeEventListener('mouseup', dragEnd);
+                const bottomArea = document.getElementById('bottom-area');
+                bottomArea.appendChild(cardBottomDisplay);
 
-    if (isConnected) {
-        const cardData = selectedCards.map(card => ({
-            cardId: card.id,
-            x: card.offsetLeft,
-            y: card.offsetTop
-        }));
+                makeCardDraggable(cardBottomDisplay);
 
-        conn.send({
-            type: 'cardMove',
-            cardData: cardData
-        });
-    }
+                cardBottomDisplay.addEventListener('dblclick', () => {
+                    const currentImage = cardBottomDisplay.style.backgroundImage;
+                    const originalImage = cardBottomDisplay.dataset.originalImage;
+                    const alternateImage = cardBottomDisplay.dataset.alternateImage;
 
-    selectedCards.forEach(card => {
-        listenForBottomPlacement(card);
-    });
-}
+                    let newImage;
+                    if (currentImage.includes(originalImage)) {
+                        newImage = alternateImage;
+                    } else {
+                        newImage = originalImage;
+                    }
 
+                    cardBottomDisplay.style.backgroundImage = `url(${newImage})`;
+                });
+            }
+
+            function dragEnd() {
+                document.removeEventListener('mousemove', dragMove);
+                document.removeEventListener('mouseup', dragEnd);
+
+                if (isConnected) {
+                    const cardData = selectedCards.map(card => ({
+                        cardId: card.id,
+                        x: card.offsetLeft,
+                        y: card.offsetTop
+                    }));
+
+                    conn.send({
+                        type: 'cardMove',
+                        cardData: cardData
+                    });
+                }
+
+                selectedCards.forEach(card => {
+                    listenForBottomPlacement(card);
+                });
+            }
 
             document.addEventListener('mousemove', dragMove);
             document.addEventListener('mouseup', dragEnd);
         }
 
-function showMessage(message) {
+        function showMessage(message) {
             messageDiv.textContent = message;
             messageDiv.style.display = 'block';
 
@@ -664,41 +622,35 @@ function showMessage(message) {
             }, 3000);
         }
 
-menuButton.addEventListener('click', () => {
+        menuButton.addEventListener('click', () => {
             controls.style.display = controls.style.display === 'flex' ? 'none' : 'flex';
         });
 
-uploadBtn.addEventListener('click', () => {
+        uploadBtn.addEventListener('click', () => {
             uploadDeckBtn.click();
         });
 
-uploadDeckBtn.addEventListener('change', uploadDeck);
+        uploadDeckBtn.addEventListener('change', uploadDeck);
 
-copyPeerIdBtn.addEventListener('click', () => {
-    const peerId = peer.id;
-    const link = `https://framellarchive.github.io/MTG/#${peerId}`;
-    
-    navigator.clipboard.writeText(link)
-        .then(() => showMessage('Link copied to clipboard: ' + link))
-        .catch(err => console.error('Failed to copy: ', err));
-});
+        copyPeerIdBtn.addEventListener('click', () => {
+            const peerId = peer.id;
+            const link = `https://framellarchive.github.io/MTG/#${peerId}`;
+            
+            navigator.clipboard.writeText(link)
+                .then(() => showMessage('Link copied to clipboard: ' + link))
+                .catch(err => console.error('Failed to copy: ', err));
+        });
 
-function handleHashChange() {
-    const hash = window.location.hash.substring(1).trim();
+        function handleHashChange() {
+            const hash = window.location.hash.substring(1).trim();
 
-    if (hash) {
-        connectToPeer(hash);
-    }
-}
+            if (hash) {
+                connectToPeer(hash);
+            }
+        }
 
-window.addEventListener('hashchange', handleHashChange);
+        window.addEventListener('hashchange', handleHashChange);
 
-
-
-
-initPeer();
-
-
-</script>
-</body>
-</html>
+        initPeer();
+    </script>
+</body></html>
