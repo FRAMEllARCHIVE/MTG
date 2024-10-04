@@ -345,48 +345,51 @@ async function fetchCardData(cardId, cardName, x, y) {
             }
         }
 
-function createCard(imageUrl, x, y) {
-    const cardId = `card-${Date.now()}`;  // Generate a unique ID based on the current time
+function createCard(cardId, imageUrl, x, y) {
+            const existingCard = document.getElementById(cardId);
+            if (existingCard) {
+                existingCard.style.left = `${x}px`;
+                existingCard.style.top = `${y}px`;
+            } else {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.id = cardId;
+                card.style.backgroundImage = `url(${imageUrl})`;
+                card.style.left = `${x}px`;
+                card.style.top = `${y}px`;
 
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.id = cardId; // Set the generated ID
-    card.style.backgroundImage = `url(${imageUrl})`;
-    card.style.left = `${x}px`;
-    card.style.top = `${y}px`;
+                card.dataset.originalImage = imageUrl;
+                card.dataset.alternateImage = "https://backs.scryfall.io/large/2/2/222b7a3b-2321-4d4c-af19-19338b134971.jpg?1677416389";
 
-    card.dataset.originalImage = imageUrl;
-    card.dataset.alternateImage = "https://backs.scryfall.io/large/2/2/222b7a3b-2321-4d4c-af19-19338b134971.jpg?1677416389";
+                gameBoard.appendChild(card);
 
-    gameBoard.appendChild(card);
+                card.addEventListener('mouseenter', () => showPreview(card.style.backgroundImage));
+                card.addEventListener('mouseleave', hidePreview);
 
-    card.addEventListener('mouseenter', () => showPreview(card.style.backgroundImage));
-    card.addEventListener('mouseleave', hidePreview);
+                card.addEventListener('dblclick', () => {
+                    const currentImage = card.style.backgroundImage;
+                    const originalImage = card.dataset.originalImage;
+                    const alternateImage = card.dataset.alternateImage;
 
-    card.addEventListener('dblclick', () => {
-        const currentImage = card.style.backgroundImage;
-        const originalImage = card.dataset.originalImage;
-        const alternateImage = card.dataset.alternateImage;
+                    let newImage;
+                    if (currentImage.includes(originalImage)) {
+                        newImage = alternateImage;
+                    } else {
+                        newImage = originalImage;
+                    }
 
-        let newImage;
-        if (currentImage.includes(originalImage)) {
-            newImage = alternateImage;
-        } else {
-            newImage = originalImage;
+                    card.style.backgroundImage = `url(${newImage})`;
+
+                    if (isConnected) {
+                        conn.send({
+                            type: 'toggleImage',
+                            cardId: cardId,
+                            newImage: newImage
+                        });
+                    }
+                });
+            }
         }
-
-        card.style.backgroundImage = `url(${newImage})`;
-
-        if (isConnected) {
-            conn.send({
-                type: 'toggleImage',
-                cardId: cardId,
-                newImage: newImage
-            });
-        }
-    });
-}
-
 
 function showPreview(currentImage) {
             const previewDiv = document.getElementById('preview');
@@ -519,7 +522,6 @@ function makeCardDraggable(cardElement) {
 
     document.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
-        
 
         currentX = e.clientX - startX;
         currentY = e.clientY - startY;
@@ -529,18 +531,16 @@ function makeCardDraggable(cardElement) {
             isDragging = false;
             cardElement.style.cursor = 'grab';
 
-
+            // Remove the card being dragged
             cardElement.remove();
 
-
-            const cardId = cardElement.id.replace('bottom-', '');
+            const cardId = cardElement.id.replace('bottom-', '') + '-' + Date.now(); // Append a timestamp
             const cardImage = cardElement.dataset.originalImage;
 
-
+            // Create the new card
             createCard(cardId, cardImage, e.clientX, e.clientY);
 
             if (isConnected) {
-
                 conn.send({
                     type: 'createCard',
                     cardId: cardId,
@@ -557,6 +557,7 @@ function makeCardDraggable(cardElement) {
         cardElement.style.cursor = 'grab';
     });
 }
+
 
 
 function handleCardInBottomArea(card) {
