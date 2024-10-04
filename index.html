@@ -389,8 +389,15 @@ function createCard(cardId, imageUrl, x, y) {
         }
 
         // Add event listeners
-        card.addEventListener('mouseenter', () => showPreview(card.style.backgroundImage));
-        card.addEventListener('mouseleave', hidePreview);
+        card.addEventListener('mouseenter', () => {
+            showPreview(card.style.backgroundImage);
+            console.log(`Showing preview for card: ${cardId}`); // Log preview display
+        });
+
+        card.addEventListener('mouseleave', () => {
+            hidePreview();
+            console.log(`Hiding preview for card: ${cardId}`); // Log preview hide
+        });
 
         card.addEventListener('dblclick', () => {
             const currentImage = card.style.backgroundImage;
@@ -405,6 +412,7 @@ function createCard(cardId, imageUrl, x, y) {
             }
 
             card.style.backgroundImage = `url(${newImage})`;
+            console.log(`Toggled image for card: ${cardId}. New image: ${newImage}`); // Log image toggle
 
             if (isConnected) {
                 console.log(`Sending toggleImage message for: ${cardId}`); // Log toggle message
@@ -415,8 +423,11 @@ function createCard(cardId, imageUrl, x, y) {
                 });
             }
         });
+
+        console.log(`Event listeners added for card: ${cardId}`); // Log event listeners added
     }
 }
+
 
 function showPreview(currentImage) {
             const previewDiv = document.getElementById('preview');
