@@ -39,8 +39,7 @@
 
         #selectionBox {
             position: absolute;
-            border: 1px dashed #00ff00;
-            background-color: rgba(0, 255, 0, 0.01);
+            background-color: rgba(0, 0, 0, 0);
             pointer-events: none;
         }
 
@@ -115,9 +114,8 @@
 
 #bottom-area {
     position: fixed;
-    bottom: 222px;
+    bottom: 188px;
     left: 50%;
-    transform: translateX(-50%);
     z-index: 1000;
 }
 
@@ -470,7 +468,7 @@ function endSelection() {
 
         gameBoard.addEventListener('mousedown', startDrag);
 
-        function startDrag(e) {
+function startDrag(e) {
             if (!e.target.classList.contains('card')) return;
 
             const card = e.target;
@@ -548,11 +546,31 @@ function handleCardInBottomArea(card) {
     cardBottomDisplay.id = `bottom-${card.id}`;
     cardBottomDisplay.style.backgroundImage = card.style.backgroundImage;
 
+    cardBottomDisplay.dataset.originalImage = card.dataset.originalImage;
+    cardBottomDisplay.dataset.alternateImage = card.dataset.alternateImage;
+
     const bottomArea = document.getElementById('bottom-area');
     bottomArea.appendChild(cardBottomDisplay);
 
     makeCardDraggable(cardBottomDisplay);
+
+    cardBottomDisplay.addEventListener('dblclick', () => {
+        const currentImage = cardBottomDisplay.style.backgroundImage;
+        const originalImage = cardBottomDisplay.dataset.originalImage;
+        const alternateImage = cardBottomDisplay.dataset.alternateImage;
+
+        let newImage;
+        if (currentImage.includes(originalImage)) {
+            newImage = alternateImage;
+        } else {
+            newImage = originalImage;
+        }
+
+        cardBottomDisplay.style.backgroundImage = `url(${newImage})`;
+
+    });
 }
+
 
 function dragEnd() {
     document.removeEventListener('mousemove', dragMove);
