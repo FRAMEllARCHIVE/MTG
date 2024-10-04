@@ -189,6 +189,7 @@ function connectToPeer(peerId = null) {
     }
 }
 
+
 function setupConnection() {
     conn.on('open', () => {
         isConnected = true;
@@ -198,33 +199,39 @@ function setupConnection() {
     });
 
     conn.on('data', (data) => {
-        console.log('Received data:', data); // Debugging line
+        console.log('Received data:', data); // Log received data
 
         if (data.type === 'deleteCard') {
             const card = document.getElementById(data.cardId);
             if (card) {
-                card.remove();  // Remove the card from the opponent's view
+                console.log(`Deleting card: ${data.cardId}`); // Log card deletion
+                card.remove();
             } else {
                 console.error(`Card with ID ${data.cardId} not found for deletion.`);
             }
         } else if (data.type === 'cardMove') {
-            moveCards(data.cardData); // Ensure this function is implemented correctly
+            console.log(`Moving cards:`, data.cardData); // Log card movement
+            moveCards(data.cardData);
         } else if (data.type === 'newCard') {
+            console.log(`Creating new card from peer: ${data.cardId}`); // Log new card creation from peer
             createCard(data.cardId, data.imageUrl, data.x, data.y);
         } else if (data.type === 'toggleImage') {
             const card = document.getElementById(data.cardId);
             if (card) {
+                console.log(`Toggling image for card: ${data.cardId}`); // Log image toggle
                 card.style.backgroundImage = `url(${data.newImage})`;
             } else {
                 console.error(`Card with ID ${data.cardId} not found for image toggle.`);
             }
         } else if (data.type === 'initialSync') {
+            console.log('Syncing initial state with peer'); // Log initial sync
             data.cardData.forEach(cardInfo => {
                 createCard(cardInfo.cardId, cardInfo.imageUrl, cardInfo.x, cardInfo.y);
             });
         }
     });
 }
+
 
 
 function moveCards(cardData) {
@@ -352,50 +359,55 @@ async function fetchCardData(cardId, cardName, x, y) {
         }
 
 function createCard(cardId, imageUrl, x, y) {
-            const existingCard = document.getElementById(cardId);
-            if (existingCard) {
-                existingCard.style.left = `${x}px`;
-                existingCard.style.top = `${y}px`;
+    console.log(`Creating card: ${cardId} at position (${x}, ${y})`); // Log card creation
+
+    const existingCard = document.getElementById(cardId);
+    if (existingCard) {
+        existingCard.style.left = `${x}px`;
+        existingCard.style.top = `${y}px`;
+        console.log(`Updated position of existing card: ${cardId}`); // Log position update
+    } else {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.id = cardId;
+        card.style.backgroundImage = `url(${imageUrl})`;
+        card.style.left = `${x}px`;
+        card.style.top = `${y}px`;
+
+        card.dataset.originalImage = imageUrl;
+        card.dataset.alternateImage = "https://backs.scryfall.io/large/2/2/222b7a3b-2321-4d4c-af19-19338b134971.jpg?1677416389";
+
+        gameBoard.appendChild(card);
+        console.log(`Appended new card to game board: ${cardId}`); // Log new card append
+
+        card.addEventListener('mouseenter', () => showPreview(card.style.backgroundImage));
+        card.addEventListener('mouseleave', hidePreview);
+
+        card.addEventListener('dblclick', () => {
+            const currentImage = card.style.backgroundImage;
+            const originalImage = card.dataset.originalImage;
+            const alternateImage = card.dataset.alternateImage;
+
+            let newImage;
+            if (currentImage.includes(originalImage)) {
+                newImage = alternateImage;
             } else {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.id = cardId;
-                card.style.backgroundImage = `url(${imageUrl})`;
-                card.style.left = `${x}px`;
-                card.style.top = `${y}px`;
+                newImage = originalImage;
+            }
 
-                card.dataset.originalImage = imageUrl;
-                card.dataset.alternateImage = "https://backs.scryfall.io/large/2/2/222b7a3b-2321-4d4c-af19-19338b134971.jpg?1677416389";
+            card.style.backgroundImage = `url(${newImage})`;
 
-                gameBoard.appendChild(card);
-
-                card.addEventListener('mouseenter', () => showPreview(card.style.backgroundImage));
-                card.addEventListener('mouseleave', hidePreview);
-
-                card.addEventListener('dblclick', () => {
-                    const currentImage = card.style.backgroundImage;
-                    const originalImage = card.dataset.originalImage;
-                    const alternateImage = card.dataset.alternateImage;
-
-                    let newImage;
-                    if (currentImage.includes(originalImage)) {
-                        newImage = alternateImage;
-                    } else {
-                        newImage = originalImage;
-                    }
-
-                    card.style.backgroundImage = `url(${newImage})`;
-
-                    if (isConnected) {
-                        conn.send({
-                            type: 'toggleImage',
-                            cardId: cardId,
-                            newImage: newImage
-                        });
-                    }
+            if (isConnected) {
+                console.log(`Sending toggleImage message for: ${cardId}`); // Log toggle message
+                conn.send({
+                    type: 'toggleImage',
+                    cardId: cardId,
+                    newImage: newImage
                 });
             }
-        }
+        });
+    }
+}
 
 function showPreview(currentImage) {
             const previewDiv = document.getElementById('preview');
@@ -569,13 +581,16 @@ function makeCardDraggable(cardElement) {
 
 
 function handleCardInBottomArea(card) {
+    console.log(`Handling card in bottom area: ${card.id}`); // Log the card being handled
 
     if (isConnected) {
+        console.log(`Sending deleteCard message for: ${card.id}`); // Log before sending
         conn.send({
             type: 'deleteCard',
             cardId: card.id
         });
     }
+    console.log(`Removing card from table: ${card.id}`); // Log before removal
     card.remove();
 
     const cardBottomDisplay = document.createElement('div');
@@ -588,6 +603,7 @@ function handleCardInBottomArea(card) {
 
     const bottomArea = document.getElementById('bottom-area');
     bottomArea.appendChild(cardBottomDisplay);
+    console.log(`Card moved to bottom area: ${cardBottomDisplay.id}`); // Log the card in bottom area
 
     makeCardDraggable(cardBottomDisplay);
 
@@ -604,7 +620,7 @@ function handleCardInBottomArea(card) {
         }
 
         cardBottomDisplay.style.backgroundImage = `url(${newImage})`;
-
+        console.log(`Toggled image for bottom card: ${cardBottomDisplay.id}`); // Log image toggle
     });
 }
 
