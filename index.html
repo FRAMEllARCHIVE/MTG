@@ -361,12 +361,14 @@ async function fetchCardData(cardId, cardName, x, y) {
 function createCard(cardId, imageUrl, x, y) {
     console.log(`Creating card: ${cardId} at position (${x}, ${y})`); // Log card creation
 
+    // Check if the card already exists
     const existingCard = document.getElementById(cardId);
     if (existingCard) {
         existingCard.style.left = `${x}px`;
         existingCard.style.top = `${y}px`;
         console.log(`Updated position of existing card: ${cardId}`); // Log position update
     } else {
+        // Create a new card if it doesn't exist
         const card = document.createElement('div');
         card.className = 'card';
         card.id = cardId;
@@ -377,9 +379,16 @@ function createCard(cardId, imageUrl, x, y) {
         card.dataset.originalImage = imageUrl;
         card.dataset.alternateImage = "https://backs.scryfall.io/large/2/2/222b7a3b-2321-4d4c-af19-19338b134971.jpg?1677416389";
 
-        gameBoard.appendChild(card);
-        console.log(`Appended new card to game board: ${cardId}`); // Log new card append
+        // Append to the game board
+        const gameBoard = document.getElementById('gameBoard'); // Ensure this points to the right element
+        if (gameBoard) {
+            gameBoard.appendChild(card);
+            console.log(`Appended new card to game board: ${cardId}`); // Log new card append
+        } else {
+            console.error("Game board element not found."); // Log error if gameBoard is not found
+        }
 
+        // Add event listeners
         card.addEventListener('mouseenter', () => showPreview(card.style.backgroundImage));
         card.addEventListener('mouseleave', hidePreview);
 
