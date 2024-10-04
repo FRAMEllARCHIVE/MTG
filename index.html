@@ -510,19 +510,49 @@ function listenForBottomPlacement(card) {
 
 function makeCardDraggable(cardElement) {
     let isDragging = false;
-    let startX, currentX;
+    let startX, startY, currentX, currentY;
 
     cardElement.addEventListener('mousedown', (e) => {
         isDragging = true;
         startX = e.clientX - cardElement.offsetLeft;
+        startY = e.clientY - cardElement.offsetTop;
         cardElement.style.cursor = 'grabbing';
+        cardElement.style.position = 'absolute';
     });
 
     document.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
+        
+
         currentX = e.clientX - startX;
-        cardElement.style.position = 'absolute';
+        currentY = e.clientY - startY;
         cardElement.style.left = `${currentX}px`;
+
+        if (Math.abs(currentY) >= 111) {
+            isDragging = false;
+            cardElement.style.cursor = 'grab';
+
+
+            cardElement.remove();
+
+
+            const cardId = cardElement.id.replace('bottom-', '');
+            const cardImage = cardElement.dataset.originalImage;
+
+
+            createCard(cardId, cardImage, e.clientX, e.clientY);
+
+            if (isConnected) {
+
+                conn.send({
+                    type: 'createCard',
+                    cardId: cardId,
+                    imageUrl: cardImage,
+                    x: e.clientX,
+                    y: e.clientY
+                });
+            }
+        }
     });
 
     document.addEventListener('mouseup', () => {
@@ -530,6 +560,7 @@ function makeCardDraggable(cardElement) {
         cardElement.style.cursor = 'grab';
     });
 }
+
 
 function handleCardInBottomArea(card) {
 
