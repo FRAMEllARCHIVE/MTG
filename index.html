@@ -190,36 +190,42 @@ function connectToPeer(peerId = null) {
 }
 
 function setupConnection() {
-            conn.on('open', () => {
-                isConnected = true;
-                console.log('Connected to peer');
-                showMessage('Connected to opponent!');
-                syncInitialState();
+    conn.on('open', () => {
+        isConnected = true;
+        console.log('Connected to peer');
+        showMessage('Connected to opponent!');
+        syncInitialState();
+    });
+
+    conn.on('data', (data) => {
+        console.log('Received data:', data); // Debugging line
+
+        if (data.type === 'deleteCard') {
+            const card = document.getElementById(data.cardId);
+            if (card) {
+                card.remove();  // Remove the card from the opponent's view
+            } else {
+                console.error(`Card with ID ${data.cardId} not found for deletion.`);
+            }
+        } else if (data.type === 'cardMove') {
+            moveCards(data.cardData); // Ensure this function is implemented correctly
+        } else if (data.type === 'newCard') {
+            createCard(data.cardId, data.imageUrl, data.x, data.y);
+        } else if (data.type === 'toggleImage') {
+            const card = document.getElementById(data.cardId);
+            if (card) {
+                card.style.backgroundImage = `url(${data.newImage})`;
+            } else {
+                console.error(`Card with ID ${data.cardId} not found for image toggle.`);
+            }
+        } else if (data.type === 'initialSync') {
+            data.cardData.forEach(cardInfo => {
+                createCard(cardInfo.cardId, cardInfo.imageUrl, cardInfo.x, cardInfo.y);
             });
+        }
+    });
+}
 
-conn.on('data', (data) => {
-    if (data.type === 'deleteCard') {
-        const card = document.getElementById(data.cardId);
-        if (card) {
-            card.remove();  // Remove the card from the opponent's view
-        }
-    } else if (data.type === 'cardMove') {
-        moveCards(data.cardData);
-    } else if (data.type === 'newCard') {
-        createCard(data.cardId, data.imageUrl, data.x, data.y);
-    } else if (data.type === 'toggleImage') {
-        const card = document.getElementById(data.cardId);
-        if (card) {
-            card.style.backgroundImage = `url(${data.newImage})`;
-        }
-    } else if (data.type === 'initialSync') {
-        data.cardData.forEach(cardInfo => {
-            createCard(cardInfo.cardId, cardInfo.imageUrl, cardInfo.x, cardInfo.y);
-        });
-    }
-});
-
-        }
 
 function moveCards(cardData) {
             cardData.forEach(({ cardId, x, y }) => {
